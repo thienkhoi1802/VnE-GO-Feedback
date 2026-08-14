@@ -1,5 +1,15 @@
 import React from 'react';
-import { Star, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Star, TrendingUp, TrendingDown, Minus, Clock, RefreshCcw } from 'lucide-react';
+import { 
+  AreaChart, 
+  Area, 
+  Line,
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer 
+} from 'recharts';
 import { ISSUE_CATEGORIES } from '../types';
 import { cn } from '../lib/utils';
 
@@ -14,33 +24,36 @@ interface IssueSummaryCardProps {
 }
 
 const IssueSummaryCard: React.FC<IssueSummaryCardProps> = ({ id, count, avgRating, trend, isActive, onClick, category: propCategory }) => {
-  const category = propCategory || ISSUE_CATEGORIES[id] || { label: id, icon: '❓', color: '#94A3B8' };
+  const category = propCategory || { label: id, icon: '🏷️', color: '#94A3B8' };
 
   return (
     <button 
       onClick={onClick}
       className={cn(
-        "bg-card border p-4 rounded-xl flex flex-col gap-3 text-left transition-all hover:border-accent/50",
-        isActive ? "border-accent ring-1 ring-accent/50" : "border-border"
+        "bg-card border p-3 rounded-xl flex flex-col gap-2 text-left transition-all hover:border-accent/50 min-h-[140px]",
+        isActive ? "border-accent ring-1 ring-accent/50 bg-accent/5" : "border-border"
       )}
     >
       <div className="flex justify-between items-start">
-        <span className="text-2xl">{category.icon}</span>
+        <span className="text-xl">{category.icon}</span>
         <div className={cn(
-          "flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded",
+          "flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded",
           trend > 0 ? "bg-red-500/10 text-red-500" : trend < 0 ? "bg-secondary/10 text-secondary" : "bg-gray-500/10 text-gray-500"
         )}>
-          {trend > 0 ? <TrendingUp size={10} className="mr-0.5" /> : trend < 0 ? <TrendingDown size={10} className="mr-0.5" /> : <Minus size={10} className="mr-0.5" />}
+          {trend > 0 ? <TrendingUp size={9} className="mr-0.5" /> : trend < 0 ? <TrendingDown size={9} className="mr-0.5" /> : <Minus size={9} className="mr-0.5" />}
           {Math.abs(trend)}
         </div>
       </div>
-      <div>
-        <div className="text-xs font-bold text-text line-clamp-1">{category.label}</div>
-        <div className="text-2xl font-bold font-mono" style={{ color: category.color }}>{count}</div>
+      <div className="flex-1">
+        <div className="text-[13px] font-bold text-text leading-tight mb-1">{category.label}</div>
+        <div className="text-xl font-bold font-mono" style={{ color: category.color }}>{count}</div>
       </div>
-      <div className="flex items-center gap-1 mt-auto">
-        <Star size={12} className="fill-yellow-500 text-yellow-500" />
-        <span className="text-xs font-medium">{avgRating.toFixed(1)}</span>
+      <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/30">
+        <div className="flex items-center gap-1">
+          <Star size={10} className="fill-yellow-500 text-yellow-500" />
+          <span className="text-[10px] font-medium">{avgRating.toFixed(1)}</span>
+        </div>
+        <div className="text-[9px] text-text-muted font-bold">{((count / 563) * 100).toFixed(1)}%</div>
       </div>
     </button>
   );
@@ -51,6 +64,8 @@ interface IssueCategoryPanelProps {
   activeIssue: string | null;
   onIssueClick: (id: string | null) => void;
   categories?: Record<string, any>;
+  onAddCategory?: (label: string) => void;
+  isUpdating?: boolean;
   drillDownStats?: {
     pageTypes: { name: string; count: number; percent: number }[];
     devices: { name: string; count: number; percent: number }[];
@@ -58,6 +73,7 @@ interface IssueCategoryPanelProps {
     latencies: { name: string; count: number; percent: number }[];
     ratings: { name: string; count: number; percent: number }[];
     sentiments: { name: string; count: number; percent: number }[];
+    timeSeries: { date: string; count: number; trend?: number }[];
   } | null;
 }
 
@@ -66,12 +82,33 @@ export const IssueCategoryPanel: React.FC<IssueCategoryPanelProps> = ({
   activeIssue, 
   onIssueClick, 
   categories = ISSUE_CATEGORIES,
+  onAddCategory,
+  isUpdating,
   drillDownStats
 }) => {
+  const [newCategoryLabel, setNewCategoryLabel] = React.useState('');
+  const [showAddCategory, setShowAddCategory] = React.useState(false);
+
   return (
-    <div className="mb-6">
+    <div className="mb-6 relative">
+      {isUpdating && (
+        <div className="absolute inset-0 bg-background/20 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-xl">
+          <div className="bg-card border border-accent/30 px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-bounce">
+            <RefreshCcw size={14} className="animate-spin text-accent" />
+            <span className="text-[10px] font-bold text-accent uppercase tracking-wider">Đang phân bổ lại...</span>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold">Danh mục Vấn đề</h3>
+        <div className="flex items-center gap-4">
+          <h3 className="text-lg font-bold">Danh mục Vấn đề</h3>
+          <button 
+            onClick={() => setShowAddCategory(!showAddCategory)}
+            className="text-[10px] font-bold px-2 py-1 bg-white/5 border border-dashed border-border rounded hover:border-accent hover:text-accent transition-all"
+          >
+            + Thêm Danh mục
+          </button>
+        </div>
         {activeIssue && (
           <button 
             onClick={() => onIssueClick(null)}
@@ -82,8 +119,45 @@ export const IssueCategoryPanel: React.FC<IssueCategoryPanelProps> = ({
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-        {issueStats.slice(0, 12).map((stat) => (
+      {showAddCategory && (
+        <div className="mb-6 p-4 bg-accent/5 border border-accent/20 rounded-xl flex gap-3 items-center animate-in fade-in slide-in-from-top-2 duration-200">
+          <input 
+            type="text" 
+            placeholder="Tên danh mục mới..."
+            className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
+            value={newCategoryLabel}
+            onChange={(e) => setNewCategoryLabel(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && newCategoryLabel.trim()) {
+                onAddCategory?.(newCategoryLabel.trim());
+                setNewCategoryLabel('');
+                setShowAddCategory(false);
+              }
+            }}
+          />
+          <button 
+            onClick={() => {
+              if (newCategoryLabel.trim()) {
+                onAddCategory?.(newCategoryLabel.trim());
+                setNewCategoryLabel('');
+                setShowAddCategory(false);
+              }
+            }}
+            className="px-4 py-2 bg-accent text-white text-sm font-bold rounded-lg hover:bg-accent/90 transition-colors"
+          >
+            Thêm
+          </button>
+          <button 
+            onClick={() => setShowAddCategory(false)}
+            className="p-2 text-text-muted hover:text-text"
+          >
+            Hủy
+          </button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
+        {issueStats.slice(0, 10).map((stat) => (
           <IssueSummaryCard 
             key={stat.id}
             {...stat}
@@ -247,6 +321,66 @@ export const IssueCategoryPanel: React.FC<IssueCategoryPanelProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Time Series Chart */}
+          <div className="mt-10 pt-8 border-t border-accent/10">
+            <div className="flex items-center gap-2 mb-6">
+              <Clock size={16} className="text-accent" />
+              <h5 className="text-xs font-bold text-text uppercase tracking-widest">Phân bố lỗi theo thời gian</h5>
+            </div>
+            <div className="h-48 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={drillDownStats.timeSeries}>
+                  <defs>
+                    <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#FF6B35" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#FF6B35" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                  <XAxis 
+                    dataKey="date" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#94A3B8', fontSize: 10 }}
+                    dy={10}
+                    minTickGap={30}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#94A3B8', fontSize: 10 }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#1A1D27', 
+                      border: '1px solid #2A2D3A', 
+                      borderRadius: '8px',
+                      fontSize: '10px'
+                    }}
+                    itemStyle={{ color: '#FF6B35' }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="count" 
+                    name="Số lỗi"
+                    stroke="#FF6B35" 
+                    strokeWidth={2}
+                    fillOpacity={1} 
+                    fill="url(#colorCount)" 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="trend" 
+                    name="Xu hướng"
+                    stroke="#3498DB" 
+                    strokeWidth={2} 
+                    dot={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
       )}
 
@@ -263,7 +397,7 @@ export const IssueCategoryPanel: React.FC<IssueCategoryPanelProps> = ({
           </thead>
           <tbody className="divide-y divide-border">
             {issueStats.map((stat) => {
-              const category = categories[stat.id] || { label: stat.id, icon: '❓' };
+              const category = categories[stat.id] || { label: stat.id, icon: '🏷️' };
               return (
                 <tr 
                   key={stat.id} 

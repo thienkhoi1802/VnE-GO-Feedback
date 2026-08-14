@@ -1,0 +1,38 @@
+{
+  "entities": {
+    "Category": {
+      "title": "Category",
+      "description": "Custom issue categories defined by users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "icon": { "type": "string" },
+        "color": { "type": "string" },
+        "keywords": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["id", "label", "icon", "color"]
+    },
+    "ManualTag": {
+      "title": "ManualTag",
+      "description": "Manual tag overrides for specific feedback items",
+      "type": "object",
+      "properties": {
+        "feedbackId": { "type": "string" },
+        "categories": { "type": "array", "items": { "type": "string" } },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["feedbackId", "categories"]
+    }
+  },
+  "firestore": {
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Collection of custom issue categories"
+    },
+    "/manual_tags/{feedbackId}": {
+      "schema": "ManualTag",
+      "description": "Collection of manual tag overrides indexed by feedbackId"
+    }
+  }
+}

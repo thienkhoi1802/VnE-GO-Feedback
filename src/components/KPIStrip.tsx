@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LineChart, Line, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { ArrowUp, ArrowDown, Minus, Info, Star, MessageSquare, Heart, AlertCircle } from 'lucide-react';
+import { ArrowUp, ArrowDown, Minus, Info, Star, MessageSquare, Heart, AlertCircle, Zap, ChevronRight } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Modal } from './Modal';
 
@@ -44,17 +44,23 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, trend, trendLabel, data
         <div className="text-[9px] text-text-muted leading-tight mt-1 italic">{trendLabel}</div>
       )}
       <div className="h-8 mt-1">
-        <ResponsiveContainer width="100%" height="100%">
-          {isBar ? (
-            <BarChart data={data}>
-              <Bar dataKey="value" fill={color} radius={[2, 2, 0, 0]} />
-            </BarChart>
-          ) : (
-            <LineChart data={data}>
-              <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2} dot={false} />
-            </LineChart>
-          )}
-        </ResponsiveContainer>
+        {data && data.length > 0 ? (
+          <ResponsiveContainer width="100%" height="100%">
+            {isBar ? (
+              <BarChart data={data}>
+                <Bar dataKey="value" fill={color} radius={[2, 2, 0, 0]} />
+              </BarChart>
+            ) : (
+              <LineChart data={data}>
+                <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2} dot={false} />
+              </LineChart>
+            ) }
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-full w-full flex items-center justify-center text-[8px] text-text-muted italic">
+            Không có dữ liệu
+          </div>
+        )}
       </div>
     </div>
   );
@@ -82,6 +88,12 @@ interface KPIStripProps {
   };
   pageTypeData: any[];
   deviceMetrics: any;
+  comparisonLabel?: string;
+  ratingTrend?: number;
+  volumeTrend?: number;
+  nssTrend?: number;
+  todayCount?: number;
+  onViewToday?: () => void;
 }
 
 export const KPIStrip: React.FC<KPIStripProps> = ({ 
@@ -100,16 +112,23 @@ export const KPIStrip: React.FC<KPIStripProps> = ({
   topIssuePercent,
   historicalData,
   pageTypeData,
-  deviceMetrics
+  deviceMetrics,
+  comparisonLabel = "so với kỳ trước",
+  ratingTrend,
+  volumeTrend,
+  nssTrend,
+  todayCount = 0,
+  onViewToday
 }) => {
   const [activeModal, setActiveModal] = useState<string | null>(null);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <KPICard 
         title="Điểm Đánh giá TB" 
         value={`${avgRating.toFixed(1)} ★`} 
-        trend={-10} 
+        trend={ratingTrend} 
+        trendLabel={comparisonLabel}
         data={historicalData.rating}
         color="#FF6B35"
         onClick={() => setActiveModal('rating')}
@@ -117,6 +136,8 @@ export const KPIStrip: React.FC<KPIStripProps> = ({
       <KPICard 
         title="Tổng số Phản hồi" 
         value={totalFeedback} 
+        trend={volumeTrend}
+        trendLabel={comparisonLabel}
         data={historicalData.volume}
         color="#00C9A7"
         isBar
@@ -125,31 +146,31 @@ export const KPIStrip: React.FC<KPIStripProps> = ({
       <KPICard 
         title="Chỉ số Cảm xúc (NSS)" 
         value={`${nss > 0 ? '+' : ''}${nss.toFixed(1)}%`} 
-        trend={-28}
+        trend={nssTrend}
+        trendLabel={`NSS = % Tích cực - % Tiêu cực (${comparisonLabel})`}
         data={historicalData.sentiment}
         color="#3498DB"
-        trendLabel="Net Sentiment Score: % Tích cực - % Tiêu cực"
         onClick={() => setActiveModal('sentiment')}
       />
-      <KPICard 
-        title="Tỷ lệ Cần xử lý" 
-        value={`${actionablePercent}%`} 
-        data={historicalData.actionable}
-        color="#9B59B6"
-        trendLabel="Tỷ lệ phản hồi có nội dung cụ thể cần cải tiến"
-        onClick={() => setActiveModal('actionable')}
-      />
-      <div 
-        className="bg-card border border-border p-4 rounded-xl flex flex-col gap-2 overflow-hidden cursor-pointer hover:border-accent/50 hover:bg-accent/5 transition-all group"
-        onClick={() => setActiveModal('issue')}
-      >
-        <div className="flex justify-between items-start">
-          <div className="text-text-muted text-[10px] font-bold uppercase tracking-wider truncate">Vấn đề Nổi cộm</div>
-          <Info size={12} className="text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="bg-card border border-border p-6 rounded-xl flex flex-col justify-between relative overflow-hidden group hover:border-accent/30 transition-all">
+        <div className="flex justify-between items-start mb-4">
+          <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Phản hồi mới hôm nay</div>
+          <div className="p-2 bg-accent/10 rounded-lg text-accent">
+            <Zap size={16} />
+          </div>
         </div>
-        <div className="text-lg font-bold text-accent mt-1 truncate" title={topIssue}>{topIssue}</div>
-        <div className="mt-auto">
-          <span className="bg-accent/10 text-accent text-[9px] px-2 py-0.5 rounded-full font-bold uppercase whitespace-nowrap">Đang tăng cao</span>
+        <div className="flex items-baseline gap-2">
+          <div className="text-4xl font-bold font-mono text-text">{todayCount}</div>
+          <div className="text-xs text-text-muted">mục</div>
+        </div>
+        <button 
+          onClick={onViewToday}
+          className="mt-4 w-full py-2 bg-white/5 hover:bg-white/10 border border-border rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+        >
+          Xem chi tiết <ChevronRight size={12} />
+        </button>
+        <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
+          <Zap size={120} />
         </div>
       </div>
 
@@ -287,36 +308,6 @@ export const KPIStrip: React.FC<KPIStripProps> = ({
           <div className="text-xs text-text-muted leading-relaxed">
             <p className="font-bold text-text mb-1">Giải nghĩa & Công thức:</p>
             NSS = (% Tích cực) - (% Tiêu cực). Chỉ số này phản ánh sức khỏe thương hiệu và mức độ hài lòng thực tế. NSS dương cho thấy lượng người ủng hộ nhiều hơn người phản đối.
-          </div>
-        </div>
-      </Modal>
-
-      <Modal 
-        isOpen={activeModal === 'actionable'} 
-        onClose={() => setActiveModal(null)}
-        title="Chi tiết Tỷ lệ Cần xử lý"
-      >
-        <div className="space-y-6">
-          <div className="flex items-center gap-4 bg-accent/10 p-6 rounded-2xl border border-accent/20">
-            <MessageSquare size={32} className="text-accent" />
-            <div>
-              <div className="text-3xl font-bold font-mono">{actionablePercent}%</div>
-              <div className="text-xs text-text-muted font-bold uppercase">Phản hồi có giá trị hành động</div>
-            </div>
-          </div>
-          <div className="space-y-4">
-            <p className="text-sm text-text">
-              Trong tổng số <span className="font-bold">{totalFeedback}</span> phản hồi, có <span className="font-bold text-accent">{actionableCount}</span> phản hồi chứa thông tin cụ thể về lỗi, yêu cầu tính năng hoặc góp ý chi tiết.
-            </p>
-            <div className="bg-background/50 p-4 rounded-xl border border-border text-xs text-text-muted">
-              <p className="font-bold text-text mb-2">Tiêu chí xác định:</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Mô tả cụ thể hành vi lỗi</li>
-                <li>Có thông tin về thiết bị/môi trường</li>
-                <li>Đề xuất cải tiến rõ ràng</li>
-                <li>Không phải là lời khen/chê chung chung</li>
-              </ul>
-            </div>
           </div>
         </div>
       </Modal>

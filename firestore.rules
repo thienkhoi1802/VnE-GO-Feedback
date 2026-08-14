@@ -1,0 +1,77 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: categories
+// Document ID: categoryId (string)
+// Fields:
+//   - id: string (required)
+//   - label: string (required, 1-50 chars)
+//   - icon: string (required)
+//   - color: string (required, hex format)
+//   - keywords: list (optional, strings)
+//
+// Collection: manual_tags
+// Document ID: feedbackId (string)
+// Fields:
+//   - feedbackId: string (required)
+//   - categories: list (required, strings)
+//   - updatedAt: timestamp (required)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+             (request.auth.token.email == "thienkhoiart@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    function isValidCategory(data) {
+      return data.keys().hasAll(['label', 'icon', 'color']) &&
+             data.label is string && data.label.size() > 0 && data.label.size() <= 100 &&
+             data.icon is string &&
+             data.color is string && data.color.matches("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$");
+    }
+
+    function isValidManualTag(data) {
+      return data.keys().hasAll(['feedbackId', 'categories', 'updatedAt']) &&
+             data.feedbackId is string &&
+             data.categories is list &&
+             data.updatedAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // Categories: Anyone can read, only admins can manage
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidCategory(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Manual Tags: Anyone can read, only admins can manage
+    match /manual_tags/{feedbackId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidManualTag(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

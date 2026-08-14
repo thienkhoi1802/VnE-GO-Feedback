@@ -29,6 +29,9 @@ export const DevicePlatformPanel: React.FC<DevicePlatformPanelProps> = ({
   ratingByDevice,
   topIssuesByDevice
 }) => {
+  const totalDevice = deviceTypeData.reduce((acc, curr) => acc + curr.value, 0);
+  const totalOS = osData.reduce((acc, curr) => acc + curr.value, 0);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
       <div className="bg-card border border-border p-6 rounded-xl">
@@ -52,6 +55,7 @@ export const DevicePlatformPanel: React.FC<DevicePlatformPanelProps> = ({
                 </Pie>
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#1A1D27', border: '1px solid #2A2D3A', borderRadius: '8px' }}
+                  formatter={(value: number) => [`${((value / totalDevice) * 100).toFixed(1)}%`, 'Tỉ lệ']}
                 />
                 <Legend verticalAlign="bottom" height={36} />
               </PieChart>
@@ -70,6 +74,7 @@ export const DevicePlatformPanel: React.FC<DevicePlatformPanelProps> = ({
                 <Tooltip 
                   cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                   contentStyle={{ backgroundColor: '#1A1D27', border: '1px solid #2A2D3A', borderRadius: '8px' }}
+                  formatter={(value: number) => [`${((value / totalOS) * 100).toFixed(1)}%`, 'Tỉ lệ']}
                 />
                 <Bar dataKey="value" fill="#00C9A7" radius={[0, 4, 4, 0]} />
               </BarChart>

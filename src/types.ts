@@ -25,6 +25,7 @@ export interface FeedbackRow {
 }
 
 export interface ProcessedFeedback extends FeedbackRow {
+  _id: string;
   _date: Date;
   _week: string;
   _rating: number;
@@ -41,6 +42,7 @@ export interface ProcessedFeedback extends FeedbackRow {
 }
 
 export interface IssueCategory {
+  id?: string;
   label: string;
   icon: string;
   color: string;

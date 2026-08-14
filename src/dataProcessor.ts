@@ -139,6 +139,7 @@ export function processData(rows: FeedbackRow[], customCategories?: Record<strin
     const rating = parseInt(row.Rating) || 0;
     return {
       ...row,
+      _id: `${row.Feedback}${row.Timestamp}`.replace(/[\/\s\.]/g, '_').substring(0, 500),
       _date: date,
       _week: getWeekKey(date),
       _rating: rating,
