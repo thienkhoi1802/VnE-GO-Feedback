@@ -52,7 +52,69 @@ export const TimelineTrendPanel: React.FC<TimelineTrendPanelProps> = ({
   onRatingFilter,
   activeRating
 }) => {
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const ratingDiff = ((comparison.periodB.avg - comparison.periodA.avg) / comparison.periodA.avg) * 100;
+
+  const shouldShowLabel = useMemo(() => {
+    if (granularity === 'month') return true;
+    if (granularity === 'week') return data.length <= 25;
+    if (granularity === 'day') return data.length <= 14;
+    return false;
+  }, [granularity, data.length]);
+
+  const renderRatingLabel = (props: any) => {
+    const { x, y, value, index } = props;
+    if (!shouldShowLabel) return null;
+    if (x == null || y == null || isNaN(x) || isNaN(y) || value == null || isNaN(value)) {
+      return null;
+    }
+    const numVal = Number(value);
+    if (numVal <= 0) return null;
+
+    const displayRating = isMobile ? numVal.toFixed(1) : numVal.toFixed(2);
+    const pillWidth = isMobile ? 32 : 40;
+    const pillHeight = isMobile ? 16 : 18;
+    const halfW = pillWidth / 2;
+    const halfH = pillHeight / 2;
+    const labelY = y < 28 ? y + 16 : y - 14;
+
+    return (
+      <g key={`rating-label-${index}`} className="pointer-events-none select-none">
+        <rect
+          x={x - halfW}
+          y={labelY - halfH}
+          width={pillWidth}
+          height={pillHeight}
+          rx={pillHeight / 2}
+          fill="#13151F"
+          stroke="#FF6B35"
+          strokeWidth={1.2}
+          style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.6))' }}
+        />
+        <text
+          x={x - (isMobile ? 1 : 1.5)}
+          y={labelY + 0.5}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={isMobile ? 8.5 : 9.5}
+          fontWeight="700"
+          fontFamily="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+        >
+          <tspan fill="#FFFFFF">{displayRating}</tspan>
+          <tspan fill="#FFB800" fontSize={isMobile ? 7.5 : 8.5} dx={1}>★</tspan>
+        </text>
+      </g>
+    );
+  };
 
   const handleLegendClick = (o: any) => {
     const { dataKey } = o;
@@ -100,7 +162,7 @@ export const TimelineTrendPanel: React.FC<TimelineTrendPanelProps> = ({
         <div className="h-[300px] sm:h-[450px]">
           {data && data.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <ComposedChart data={data} margin={{ top: 25, right: 15, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2A2D3A" vertical={false} />
               <XAxis 
                 dataKey="key" 
@@ -252,8 +314,9 @@ export const TimelineTrendPanel: React.FC<TimelineTrendPanelProps> = ({
                 name={`Rating TB ${granularity === 'day' ? 'hàng ngày' : granularity === 'week' ? 'hàng tuần' : 'hàng tháng'}`} 
                 stroke="#FF6B35" 
                 strokeWidth={3} 
-                dot={{ r: 2, fill: '#FF6B35', strokeWidth: 0 }}
+                dot={{ r: 3, fill: '#FF6B35', stroke: '#13151F', strokeWidth: 1.5 }}
                 activeDot={{ r: 6, strokeWidth: 0 }}
+                label={renderRatingLabel}
               />
               <ReferenceLine 
                 yAxisId="right" 
